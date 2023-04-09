@@ -35,12 +35,15 @@ def cal_metrics():
     global packets_received
     last_processed_seq_no = packets_received[last_prcoessed]
     dropped_packets = 0
+    
     for i in range(last_prcoessed + 1, last_prcoessed + 1000):
+        # print(packets_received[i], last_processed_seq_no)
         if packets_received[i] == last_processed_seq_no + packet_size:
             last_processed_seq_no = packets_received[i]
         else:
             dropped_packets = dropped_packets + 1
-            last_processed_seq_no = last_processed_seq_no + packet_size
+            last_processed_seq_no = packets_received[i]
+    # print("packets dropped: ", dropped_packets)
     print("Packet {} - {}: Dropped Packet - {}, Good Put - {}".format(last_prcoessed, last_prcoessed+1000, (dropped_packets)/1000, (1-((dropped_packets)/1000))))
 
 seq_f = open("sequence_received.csv", "w")
@@ -57,21 +60,22 @@ def handle_client_connection(client_socket):
         while True:
             seq_no = client_socket.recv(1024)
             if not seq_no:  # no data received within timeout period
-                try:
-                    clientsocket, addr = server_socket.accept()
-                    seq_no = client_socket.recv(1024)
-                    print("Sequence number: ", seq_no)
-                    print("Connection resumed from %s" % str(addr))
-                    break
-                except:
-                    time.sleep(1)
-                # print('Client stopped sending data. Closing socket.')
-                # client_socket.close()
-                # break
+                # try:
+                #     clientsocket, addr = server_socket.accept()
+                #     seq_no = client_socket.recv(1024)
+                #     print("Sequence number: ", seq_no)
+                #     print("Connection resumed from %s" % str(addr))
+                #     break
+                # except:
+                #     time.sleep(1)
+                print('Client stopped sending data. Closing socket.')
+                client_socket.close()
+                break
             seq_no = seq_no.decode()
             bisect.insort(packets_received, int(seq_no))
             # print(packets_received)
             if packet_counter == 1000:
+                # print("Packets received: ", packets_received)
                 packet_counter = 0
                 cal_metrics()
                 if len(packets_received) >= max_sequence_number / packet_size:
